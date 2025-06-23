@@ -121,7 +121,22 @@ class ApiClient {
       id: string
       name: string
       email: string
-      all_subscriptions: any[]
+      all_subscriptions: Array<{
+        id: string
+        total_Cuentokens: number
+        start_date: string
+        end_date: string
+        Subscription: {
+          id: string
+          name: string
+          cuent_tokens: number
+          duration: string
+          created_at: string
+          updated_at: string
+        }
+        created_at: string
+        updated_at: string
+      }>
       created_at: string
       updated_at: string
     }>("/api/v1/users/profile")
@@ -472,12 +487,8 @@ class ApiClient {
       Array<{
         id: string
         name: string
-        description: string
-        price: number
-        currency: string
-        interval: string
-        features: any[]
-        is_active: boolean
+        cuent_tokens: number
+        duration: string
         created_at: string
         updated_at: string
       }>
@@ -488,12 +499,8 @@ class ApiClient {
     return this.request<{
       id: string
       name: string
-      description: string
-      price: number
-      currency: string
-      interval: string
-      features: any[]
-      is_active: boolean
+      cuent_tokens: number
+      duration: string
       created_at: string
       updated_at: string
     }>(`/api/v1/subscription/${id}`)

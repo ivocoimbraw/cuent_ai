@@ -148,3 +148,24 @@ export async function deleteProject(id: string) {
     return { success: false, error: error instanceof Error ? error.message : "Error al eliminar proyecto" }
   }
 }
+
+// Subscription functions
+export async function getSubscriptionPlans() {
+  try {
+    const response = await apiClient.getSubscriptionPlans()
+    return response.data
+  } catch (error) {
+    console.error("Error fetching subscription plans:", error)
+    return []
+  }
+}
+
+export async function getUserSubscription() {
+  try {
+    const response = await apiClient.getUserSubscription()
+    return response.data
+  } catch (error) {
+    console.error("Error fetching user subscription:", error)
+    return null
+  }
+}
