@@ -59,13 +59,12 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
       setError(result.error || "Error al generar audio")
     }
   }
-
-  const handleGenerateVideo = async (id: string) => {
+  const handleGenerateVideo = async (id: string, keywords: string) => {
     setAssets(prev => prev.map(asset => 
       asset.id === id ? { ...asset, video_state: "PROCESSING" } : asset
     ))
 
-    const result = await generateVideo(id, "")
+    const result = await generateVideo(id, keywords)
     
     if (result.success) {
       setTimeout(() => {
@@ -227,14 +226,13 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-              >
-                <AssetCard
+              >                <AssetCard
                   asset={asset}
                   onUpdateLine={(line: string) => updateAssetLine(asset.id, line)}
                   onGenerateAudio={() => handleGenerateAudio(asset.id)}
-                  onGenerateVideo={() => handleGenerateVideo(asset.id)}
+                  onGenerateVideo={(keywords: string) => handleGenerateVideo(asset.id, keywords)}
                   onRegenerateAudio={() => handleGenerateAudio(asset.id)}
-                  onRegenerateVideo={() => handleGenerateVideo(asset.id)}
+                  onRegenerateVideo={(keywords: string) => handleGenerateVideo(asset.id, keywords)}
                 />
               </motion.div>
             ))}

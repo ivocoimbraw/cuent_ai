@@ -19,15 +19,18 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Asset } from "@/lib/types"
 
 interface AssetCardProps {
   asset: Asset
   onUpdateLine: (line: string) => void
   onGenerateAudio: () => void
-  onGenerateVideo: () => void
+  onGenerateVideo: (keywords: string) => void
   onRegenerateAudio: () => void
-  onRegenerateVideo: () => void
+  onRegenerateVideo: (keywords: string) => void
 }
 
 const getStateIcon = (state: Asset["audio_state"] | Asset["video_state"]) => {
@@ -70,6 +73,9 @@ export function AssetCard({
   const [editValue, setEditValue] = useState(asset.line)
   const [audioDuration, setAudioDuration] = useState<number | null>(null)
   const [videoDuration, setVideoDuration] = useState<number | null>(null)
+  const [keywords, setKeywords] = useState("")
+  const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false)
+  const [isRegenerateDialog, setIsRegenerateDialog] = useState(false)
 
   // Add this helper function at the top of the component:
   const isSFX = asset.type === "SFX"
@@ -82,6 +88,29 @@ export function AssetCard({
   const handleCancel = () => {
     setEditValue(asset.line)
     setIsEditing(false)
+  }
+
+  const handleVideoGeneration = () => {
+    if (keywords.trim()) {
+      onGenerateVideo(keywords.trim())
+      setIsVideoDialogOpen(false)
+      setKeywords("")
+    }
+  }
+
+  const handleVideoRegeneration = () => {
+    if (keywords.trim()) {
+      onRegenerateVideo(keywords.trim())
+      setIsVideoDialogOpen(false)
+      setIsRegenerateDialog(false)
+      setKeywords("")
+    }
+  }
+
+  const openVideoDialog = (isRegenerate = false) => {
+    setIsRegenerateDialog(isRegenerate)
+    setKeywords(asset.line || "") // Pre-fill with asset line as default
+    setIsVideoDialogOpen(true)
   }
 
   const handleAudioLoadedMetadata = (e: React.SyntheticEvent<HTMLAudioElement>) => {
@@ -109,7 +138,7 @@ export function AssetCard({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  const canGenerateVideo = asset.audio_state === "FINISHED" && asset.video_state === "PENDING"
+  const canGenerateVideo = asset.audio_state === "FINISHED" && (asset.video_state === "PENDING" || asset.video_state === "ERROR")
   const canRegenerateVideo = asset.audio_state === "FINISHED" && asset.video_state === "FINISHED"
 
   return (
@@ -295,7 +324,7 @@ export function AssetCard({
                   </div>
                 </div>
                 <Button
-                  onClick={onRegenerateVideo}
+                  onClick={() => openVideoDialog(true)}
                   disabled={!canRegenerateVideo}
                   className="w-full bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800"
                 >
@@ -316,7 +345,7 @@ export function AssetCard({
                 </div>
                 <Button
                   size="sm"
-                  onClick={onGenerateVideo}
+                  onClick={() => openVideoDialog(true)}
                   disabled={!canGenerateVideo}
                   className="bg-red-600 hover:bg-red-700"
                 >
@@ -329,7 +358,7 @@ export function AssetCard({
               </div>
             ) : (
               <Button
-                onClick={onGenerateVideo}
+                onClick={() => openVideoDialog(false)}
                 disabled={!canGenerateVideo}
                 className="w-full bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800"
               >
@@ -340,6 +369,64 @@ export function AssetCard({
           </div>
         </CardContent>
       </Card>
+
+      {/* Video Generation Dialog */}
+      <Dialog open={isVideoDialogOpen} onOpenChange={setIsVideoDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-800">
+          <DialogHeader>
+            <DialogTitle className="text-white">
+              {isRegenerateDialog ? "Regenerar Video" : "Generar Video"}
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Ingresa palabras clave para generar el video. Estas palabras ayudarán a la IA a crear el contenido visual apropiado.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="keywords" className="text-sm font-medium text-gray-300">
+                Palabras clave *
+              </Label>
+              <Textarea
+                id="keywords"
+                placeholder="Ej: bosque, mágico, noche, luciérnagas..."
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+                className="mt-1 bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-purple-600"
+                rows={3}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Ingresa palabras clave separadas por comas que describan la escena que quieres generar
+              </p>
+            </div>
+            
+            <div className="bg-gray-800/50 p-3 rounded-lg">
+              <p className="text-sm text-gray-400 mb-1">Texto del asset:</p>
+              <p className="text-white text-sm">{asset.line}</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsVideoDialogOpen(false)}
+              className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={isRegenerateDialog ? handleVideoRegeneration : handleVideoGeneration}
+              disabled={!keywords.trim()}
+              className="bg-gradient-to-r from-cyan-600 to-cyan-700 hover:from-cyan-700 hover:to-cyan-800"
+            >
+              <Video className="h-4 w-4 mr-2" />
+              {isRegenerateDialog ? "Regenerar Video" : "Generar Video"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   )
 }
