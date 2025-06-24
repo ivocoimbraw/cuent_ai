@@ -16,6 +16,8 @@ export interface Script {
   state: string
   position?: number
   assets: Asset[]
+  mixed_audio?: string
+  mixed_video?: string
   created_at: string
   updated_at: string
 }

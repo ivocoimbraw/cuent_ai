@@ -92,17 +92,28 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
     }
     setIsLoading(false)
   }
-
   const handleMixAssets = async () => {
     setIsLoading(true)
-    const result = await mixScriptAssets(script.id)
+    setError(null)
     
-    if (result.success) {
-      console.log("Assets mezclados exitosamente")
-    } else {
-      setError(result.error || "Error al mezclar assets")
+    try {
+      const result = await mixScriptAssets(script.id)
+      
+      if (result.success) {
+        console.log("Assets mezclados exitosamente")
+        // Refresh the page to get the updated script with mixed media URLs
+        setTimeout(() => {
+          window.location.reload()
+        }, 1000)
+      } else {
+        setError(result.error || "Error al mezclar assets")
+      }
+    } catch (err) {
+      setError("Error inesperado al mezclar assets")
+      console.error("Mix assets error:", err)
+    } finally {
+      setIsLoading(false)
     }
-    setIsLoading(false)
   }
 
   const finishedAssets = assets.filter(asset => asset.audio_state === "FINISHED").length
@@ -158,22 +169,32 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Regenerar Todo
-            </Button>
-            <Button
+            </Button>            <Button
               onClick={handleMixAssets}
               disabled={isLoading}
-              className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+              className={`${
+                script.mixed_audio || script.mixed_video
+                  ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                  : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+              }`}
             >
-              <Shuffle className="h-4 w-4 mr-2" />
-              Mezclar Assets
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Mezclando...
+                </>
+              ) : (
+                <>
+                  <Shuffle className="h-4 w-4 mr-2" />
+                  {script.mixed_audio || script.mixed_video ? "Volver a Mezclar" : "Mezclar Assets"}
+                </>
+              )}
             </Button>
           </div>
         </div>
-      </motion.div>
-
-      {/* Assets Stats */}
+      </motion.div>      {/* Assets Stats */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card className="bg-gray-900/50 border-gray-800">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-400">Total Assets</CardTitle>
@@ -211,8 +232,193 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
               </div>
             </CardContent>
           </Card>
+
+          <Card className={`border ${
+            script.mixed_audio || script.mixed_video 
+              ? "bg-green-900/20 border-green-600/30" 
+              : "bg-gray-900/50 border-gray-800"
+          }`}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-400">Estado Mezcla</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-xl font-bold ${
+                script.mixed_audio || script.mixed_video 
+                  ? "text-green-400" 
+                  : "text-gray-500"
+              }`}>
+                {script.mixed_audio || script.mixed_video ? "✅ Listo" : "⏳ Pendiente"}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </motion.div>
+
+      {/* Mixed Media Results */}
+      {(script.mixed_audio || script.mixed_video) && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 border-green-600/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-green-400">
+                <Shuffle className="h-5 w-5" />
+                Medios Mezclados
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Mixed Audio */}
+                {script.mixed_audio && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      🎵 Audio Final
+                    </h3>
+                    <div className="bg-gray-800/50 rounded-lg p-4">
+                      <audio 
+                        controls 
+                        className="w-full"
+                        preload="metadata"
+                      >
+                        <source src={script.mixed_audio} type="audio/mpeg" />
+                        Tu navegador no soporta el elemento de audio.
+                      </audio>                      <div className="mt-2 flex justify-between items-center">
+                        <span className="text-sm text-gray-400">
+                          Audio mezclado • MP3
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                            onClick={() => {
+                              const audio = document.querySelector(`audio[src="${script.mixed_audio}"]`) as HTMLAudioElement
+                              if (audio) {
+                                if (audio.paused) {
+                                  audio.play()
+                                } else {
+                                  audio.pause()
+                                }
+                              }
+                            }}
+                          >
+                            ⏯️
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                            onClick={() => window.open(script.mixed_audio, '_blank')}
+                          >
+                            📥 Descargar
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Mixed Video */}
+                {script.mixed_video && (
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      🎬 Video Final
+                    </h3>
+                    <div className="bg-gray-800/50 rounded-lg p-4">
+                      <video 
+                        controls 
+                        className="w-full rounded-lg"
+                        preload="metadata"
+                        style={{ maxHeight: '300px' }}
+                      >
+                        <source src={script.mixed_video} type="video/mp4" />
+                        Tu navegador no soporta el elemento de video.
+                      </video>                      <div className="mt-2 flex justify-between items-center">
+                        <span className="text-sm text-gray-400">
+                          Video mezclado • MP4
+                        </span>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                            onClick={() => {
+                              const video = document.querySelector(`video[src*="${script.mixed_video}"]`) as HTMLVideoElement
+                              if (video) {
+                                if (video.paused) {
+                                  video.play()
+                                } else {
+                                  video.pause()
+                                }
+                              }
+                            }}
+                          >
+                            ⏯️
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                            onClick={() => window.open(script.mixed_video, '_blank')}
+                          >
+                            📥 Descargar
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Mixed Media Info */}
+              <div className="pt-4 border-t border-gray-700">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-400">Estado:</span>
+                    <div className="text-green-400 font-semibold">✅ Mezclado Completo</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Assets Procesados:</span>
+                    <div className="text-white">{assets.length} assets</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-400">Duración Estimada:</span>
+                    <div className="text-cyan-400">{totalDuration.toFixed(1)}s</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>        </motion.div>
+      )}
+
+      {/* Instructions when no mixed media */}
+      {!(script.mixed_audio || script.mixed_video) && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="bg-gradient-to-r from-blue-900/20 to-blue-900/5 border-blue-600/30">
+            <CardContent className="pt-6">
+              <div className="text-center space-y-3">
+                <div className="text-4xl">🎬</div>
+                <h3 className="text-lg font-semibold text-white">
+                  ¿Listo para crear tu contenido final?
+                </h3>
+                <p className="text-gray-400 max-w-lg mx-auto">
+                  Asegúrate de que todos los assets estén generados y luego haz clic en "Mezclar Assets" 
+                  para crear el audio y video final de tu script.
+                </p>
+                <div className="text-sm text-gray-500">
+                  {finishedAssets} de {assets.length} assets completados
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Assets List */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>

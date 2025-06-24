@@ -294,7 +294,7 @@ export function AssetCard({
 
             {asset.video_state === "FINISHED" && asset.video_url ? (
               <div className="space-y-3">
-                <div className="aspect-video bg-gray-800 rounded-lg border border-gray-700 overflow-hidden relative group">
+                <div className="aspect-video rounded-lg border overflow-hidden relative group">
                   <video 
                     controls 
                     className="w-full h-full object-cover rounded-lg"
