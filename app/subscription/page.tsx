@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
-import { Check, Star, Zap, Crown, CreditCard, Loader2 } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Check, Star, Zap, Crown, CreditCard, Loader2, X, Lock, AlertCircle, CheckCircle, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -52,6 +52,11 @@ export default function SubscriptionPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [subscribingTo, setSubscribingTo] = useState<string | null>(null)
+  const [showCheckout, setShowCheckout] = useState(false)
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null)
+  const [paymentStep, setPaymentStep] = useState<"idle" | "preparing" | "processing" | "success" | "error">("idle")
+  const [paymentError, setPaymentError] = useState("")
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
   useEffect(() => {
     loadData()
   }, [])
@@ -129,17 +134,74 @@ export default function SubscriptionPage() {
   }
 
   const handleSubscribe = async (planId: string) => {
-    setSubscribingTo(planId)
-    // Aquí implementarías la lógica de suscripción
-    // Por ahora solo simularemos el proceso
+    const plan = plans.find(p => p.id === planId)
+    if (!plan) return
+    
+    setSelectedPlan(plan)
+    setShowCheckout(true)
+    setPaymentStep("idle")
+    setPaymentError("")
+    setPaymentSuccess(false)
+  }
+
+  const handlePayment = async () => {
+    if (!selectedPlan) return
+    
+    setSubscribingTo(selectedPlan.id)
+    setPaymentStep("preparing")
+    
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)) // Simular proceso
-      alert("Funcionalidad de suscripción en desarrollo")
+      // Simular creación de Payment Intent
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      setPaymentStep("processing")
+      await new Promise(resolve => setTimeout(resolve, 2500))
+      
+      // Simular resultado del pago (85% éxito)
+      const paymentSuccessful = Math.random() > 0.15
+      
+      if (paymentSuccessful) {
+        setPaymentStep("success")
+        setPaymentSuccess(true)
+        
+        // Simular webhook y actualización
+        setTimeout(() => {
+          setShowCheckout(false)
+          loadData() // Recargar datos
+          resetPaymentState()
+        }, 3000)
+        
+      } else {
+        const errors = [
+          "Tu tarjeta fue declinada",
+          "Fondos insuficientes",
+          "Error de conexión con el banco",
+          "Tarjeta expirada"
+        ]
+        const randomError = errors[Math.floor(Math.random() * errors.length)]
+        setPaymentError(randomError)
+        setPaymentStep("error")
+      }
+      
     } catch (error) {
-      console.error("Error subscribing:", error)
+      setPaymentError("Error inesperado durante el pago")
+      setPaymentStep("error")
     } finally {
       setSubscribingTo(null)
     }
+  }
+
+  const resetPaymentState = () => {
+    setSelectedPlan(null)
+    setPaymentStep("idle")
+    setPaymentError("")
+    setPaymentSuccess(false)
+    setSubscribingTo(null)
+  }
+
+  const closeCheckout = () => {
+    setShowCheckout(false)
+    setTimeout(resetPaymentState, 300)
   }
 
   const getPlanIcon = (planName: string) => {
@@ -431,6 +493,244 @@ export default function SubscriptionPage() {
           </Badge>
         </div>
       </motion.div>
+
+      {/* Stripe Security Info */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="max-w-4xl mx-auto"
+      >
+        <Card className="bg-gray-900/30 border-gray-700">
+          <CardContent className="p-6">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center items-center gap-2">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Lock className="h-4 w-4 text-white" />
+                </div>
+                <h4 className="text-lg font-semibold text-white">Pagos seguros con Stripe</h4>
+              </div>
+              <p className="text-gray-400 text-sm max-w-2xl mx-auto">
+                Utilizamos Stripe, la plataforma de pagos más confiable del mundo, para procesar todas las transacciones. 
+                Tus datos están protegidos con encriptación de nivel bancario y nunca almacenamos información de tarjetas de crédito.
+              </p>
+              <div className="bg-amber-900/20 border border-amber-600/30 rounded-lg p-4 mt-4">
+                <div className="flex items-center gap-2 justify-center text-amber-400 text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="font-medium">Modo Demo</span>
+                </div>
+                <p className="text-amber-300/80 text-xs mt-1">
+                  Esta es una simulación del proceso de pago. En producción se integraría con la API real de Stripe.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Stripe Checkout Modal */}
+      <AnimatePresence>
+        {showCheckout && selectedPlan && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={(e) => e.target === e.currentTarget && paymentStep === "idle" && closeCheckout()}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-gray-900 rounded-2xl border border-gray-700 max-w-md w-full max-h-[90vh] overflow-y-auto"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Lock className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">Stripe Checkout</h3>
+                    <p className="text-sm text-gray-400">Pago seguro y encriptado</p>
+                  </div>
+                </div>
+                {paymentStep === "idle" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={closeCheckout}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Plan Summary */}
+                <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-white">Plan {selectedPlan.name}</h4>
+                    <Badge className="bg-purple-600/20 text-purple-400 border-purple-600/30">
+                      Mensual
+                    </Badge>
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-300">
+                    <div className="flex justify-between">
+                      <span>Tokens incluidos:</span>
+                      <span className="font-medium">{selectedPlan.cuent_tokens.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Duración:</span>
+                      <span className="font-medium">30 días</span>
+                    </div>
+                    <div className="flex justify-between text-base font-semibold text-white pt-2 border-t border-gray-600">
+                      <span>Total:</span>
+                      <span>${getPlanInfo(selectedPlan).price.toLocaleString()} COP</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment States */}
+                {paymentStep === "idle" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="space-y-4"
+                  >
+                    {/* Simulated Payment Form */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Número de tarjeta
+                        </label>
+                        <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 text-gray-400">
+                          •••• •••• •••• 4242 (Demo)
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Vencimiento
+                          </label>
+                          <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 text-gray-400">
+                            12/27
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            CVC
+                          </label>
+                          <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 text-gray-400">
+                            •••
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                      <Lock className="h-3 w-3" />
+                      <span>Procesado de forma segura por Stripe</span>
+                    </div>
+
+                    <Button
+                      onClick={handlePayment}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      size="lg"
+                    >
+                      Pagar ${getPlanInfo(selectedPlan).price.toLocaleString()} COP
+                    </Button>
+                  </motion.div>
+                )}
+
+                {paymentStep === "preparing" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center space-y-4"
+                  >
+                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-500" />
+                    <div>
+                      <h4 className="text-lg font-medium text-white">Preparando pago</h4>
+                      <p className="text-gray-400">Conectando con Stripe...</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {paymentStep === "processing" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center space-y-4"
+                  >
+                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-purple-500" />
+                    <div>
+                      <h4 className="text-lg font-medium text-white">Procesando pago</h4>
+                      <p className="text-gray-400">Por favor no cierres esta ventana...</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {paymentStep === "success" && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle className="h-8 w-8 text-green-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-semibold text-white">¡Pago exitoso!</h4>
+                      <p className="text-gray-400">Tu suscripción se ha activado correctamente</p>
+                    </div>
+                    <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-4">
+                      <p className="text-sm text-green-400">
+                        Plan <strong>{selectedPlan.name}</strong> activado<br />
+                        {selectedPlan.cuent_tokens.toLocaleString()} tokens disponibles
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {paymentStep === "error" && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center space-y-4"
+                  >
+                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+                      <AlertCircle className="h-8 w-8 text-red-500" />
+                    </div>
+                    <div>
+                      <h4 className="text-xl font-semibold text-white">Error en el pago</h4>
+                      <p className="text-red-400">{paymentError}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => setPaymentStep("idle")}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        Intentar de nuevo
+                      </Button>
+                      <Button
+                        onClick={closeCheckout}
+                        className="w-full"
+                        variant="ghost"
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
