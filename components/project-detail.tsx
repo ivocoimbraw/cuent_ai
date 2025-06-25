@@ -1,7 +1,7 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { ArrowLeft, Settings, Play } from "lucide-react"
+import { ArrowLeft, Settings, Play, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScriptNodes } from "@/components/script-nodes"
@@ -20,6 +20,10 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
 
   const handleCreateScript = () => {
     window.location.href = `/projects/${project.id}/scripts/new`
+  }
+
+  const handleOpenAIStudio = () => {
+    window.location.href = `/projects/${project.id}/ai-studio`
   }
 
   return (
@@ -44,6 +48,15 @@ export function ProjectDetail({ project }: ProjectDetailProps) {
             <p className="text-gray-500 text-sm mt-2">
               Creado: {new Date(project.created_at).toLocaleDateString()}
             </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={handleOpenAIStudio}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              AI Studio
+            </Button>
           </div>
         </div>
       </motion.div>
