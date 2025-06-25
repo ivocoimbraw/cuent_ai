@@ -1,3 +1,6 @@
+import { User } from "./auth-store"
+import { Asset } from "./types"
+
 interface ApiResponse<T> {
   data: T
   message: string
@@ -15,14 +18,7 @@ interface ApiError {
 }
 
 interface SignInResponse {
-  data: {
-    id: string;
-    name: string;
-    email: string;
-    all_subscriptions: any[];
-    created_at: string;
-    updated_at: string;
-  };
+  data: User;
   token: string;
   message: string;
 }
@@ -56,9 +52,13 @@ class ApiClient {
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`
 
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...options.headers,
+    }
+
+    // Add any additional headers from options
+    if (options.headers) {
+      Object.assign(headers, options.headers)
     }
 
     if (this.token) {
@@ -66,11 +66,7 @@ class ApiClient {
     }
 
     try {
- console.log("=== INICIO DEBUG ===");
-  console.log("URL:", url);
-  console.log("Options:", options);
-  console.log("Headers:", headers);
-  
+
       const response = await fetch(url, {
         ...options,
         headers,
@@ -108,11 +104,30 @@ class ApiClient {
     })
   }
 
-  async signIn(data: { email: string; password: string }) {
-    return this.request<SignInResponse>("/api/v1/users/sign-in", {
-      method: "POST",
-      body: JSON.stringify(data),
-    })
+  async signIn(data: { email: string; password: string }): Promise<SignInResponse> {
+    const url = `${this.baseURL}/api/v1/users/sign-in`
+
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const errorData: ApiError = await response.json()
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      return await response.json()
+    } catch (error) {
+      console.error("Sign-in API Request failed:", error)
+      throw error
+    }
   }
 
   // User endpoints
@@ -452,25 +467,25 @@ class ApiClient {
   }
 
   async generateAsset(id: string) {
-    return this.request<{}>(`/api/v1/assets/${id}`, {
+    return this.request<Asset>(`/api/v1/assets/${id}`, {
       method: "POST",
     })
   }
 
   async generateAllAssets(scriptId: string) {
-    return this.request<any[]>(`/api/v1/assets/${scriptId}/generate_all`, {
+    return this.request<Asset[]>(`/api/v1/assets/${scriptId}/generate_all`, {
       method: "POST",
     })
   }
 
   async regenerateAllAssets(scriptId: string) {
-    return this.request<any[]>(`/api/v1/assets/${scriptId}/regenerate_all`, {
+    return this.request<Asset[]>(`/api/v1/assets/${scriptId}/regenerate_all`, {
       method: "POST",
     })
   }
 
   async generateVideo(id: string, data: { key_words: string }) {
-    return this.request<{}>(`/api/v1/assets/${id}/generate_video`, {
+    return this.request<Asset>(`/api/v1/assets/${id}/generate_video`, {
       method: "POST",
       body: JSON.stringify(data),
     })

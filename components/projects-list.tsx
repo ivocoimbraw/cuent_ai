@@ -54,6 +54,18 @@ export function ProjectsList() {
     window.location.href = `/projects/${project.id}`
   }
 
+  const handleProjectUpdated = (updatedProject: Project) => {
+    setProjects(prev => 
+      prev.map(project => 
+        project.id === updatedProject.id ? updatedProject : project
+      )
+    )
+  }
+
+  const handleProjectDeleted = (projectId: string) => {
+    setProjects(prev => prev.filter(project => project.id !== projectId))
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -116,7 +128,12 @@ export function ProjectsList() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 * index }}
           >
-            <ProjectCard project={project} onSelect={handleSelectProject} />
+            <ProjectCard 
+              project={project} 
+              onSelect={handleSelectProject}
+              onProjectUpdated={handleProjectUpdated}
+              onProjectDeleted={handleProjectDeleted}
+            />
           </motion.div>
         ))}
       </motion.div>

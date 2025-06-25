@@ -78,8 +78,8 @@ export async function createProject(data: { name: string; description: string; u
 
 export async function generateAsset(assetId: string) {
   try {
-    await apiClient.generateAsset(assetId)
-    return { success: true }
+    const resp = await apiClient.generateAsset(assetId)
+    return { success: true, data : resp }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Error al generar asset" }
   }
@@ -87,8 +87,8 @@ export async function generateAsset(assetId: string) {
 
 export async function generateVideo(assetId: string, keywords: string) {
   try {
-    await apiClient.generateVideo(assetId, { key_words: keywords })
-    return { success: true }
+    const resp = await apiClient.generateVideo(assetId, { key_words: keywords })
+    return { success: true, data: resp }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Error al generar video" }
   }
@@ -96,8 +96,8 @@ export async function generateVideo(assetId: string, keywords: string) {
 
 export async function regenerateAllAssets(scriptId: string) {
   try {
-    await apiClient.regenerateAllAssets(scriptId)
-    return { success: true }
+    const resp = await apiClient.regenerateAllAssets(scriptId)
+    return { success: true, data: resp }
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : "Error al regenerar assets" }
   }

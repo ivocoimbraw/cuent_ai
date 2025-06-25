@@ -55,19 +55,31 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           const response = await apiClient.signIn({ email, password })
-          const { data, token } = response
-          console.log("Login response:", data)
+          console.log('Full response:', response)
+          console.log('Response data:', response.data)
+          
+          // La respuesta tiene la estructura: { data: User, token: string, message: string }
+          const { data: userData, token: authToken } = response
+          
+          console.log('Extracted user:', userData)
+          console.log('Extracted token:', authToken)
+          
+          if (!userData || !authToken) {
+            throw new Error('Missing user data or token')
+          }
+          
           // Set token in API client
-          apiClient.setToken(token)
+          apiClient.setToken(authToken)
 
           set({
-            user: data,
-            token,
+            user: userData,
+            token: authToken,
             isAuthenticated: true,
             isLoading: false,
             error: null,
           })
         } catch (error) {
+          console.error('Login error:', error)
           set({
             error: error instanceof Error ? error.message : "Error al iniciar sesión",
             isLoading: false,

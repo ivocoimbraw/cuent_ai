@@ -6,11 +6,11 @@ import { ArrowLeft, RefreshCw, Shuffle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AssetCard } from "@/components/asset-card"
-import { 
-  generateAsset, 
-  generateVideo, 
-  regenerateAllAssets, 
-  mixScriptAssets 
+import {
+  generateAsset,
+  generateVideo,
+  regenerateAllAssets,
+  mixScriptAssets
 } from "@/lib/data-fetching"
 import { Asset, Script } from "@/lib/types"
 
@@ -33,72 +33,96 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
   const [error, setError] = useState<string | null>(null)
 
   const updateAssetLine = (id: string, line: string) => {
-    setAssets(prev => prev.map(asset => 
+    setAssets(prev => prev.map(asset =>
       asset.id === id ? { ...asset, line } : asset
     ))
   }
 
   const handleGenerateAudio = async (id: string) => {
-    setAssets(prev => prev.map(asset => 
+    setAssets(prev => prev.map(asset =>
       asset.id === id ? { ...asset, audio_state: "PROCESSING" } : asset
     ))
 
-    const result = await generateAsset(id)
-    
-    if (result.success) {
-      // Simulate completion after 3 seconds
-      setTimeout(() => {
-        setAssets(prev => prev.map(asset => 
-          asset.id === id ? { ...asset, audio_state: "FINISHED" } : asset
+    try {
+      const result = await generateAsset(id)
+      const { success, data } = result;
+      const realAsset = data?.data;
+
+      if (success && realAsset?.audio_url) {
+        setAssets(prev => prev.map(asset =>
+          asset.id === id ? {
+            ...asset,
+            ...realAsset
+          } : asset
         ))
-      }, 3000)
-    } else {
-      setAssets(prev => prev.map(asset => 
+      } else {
+        setAssets(prev => prev.map(asset =>
+          asset.id === id ? { ...asset, audio_state: "ERROR" } : asset
+        ))
+        setError(result.error || "Error al generar audio")
+      }
+    } catch (error) {
+      setAssets(prev => prev.map(asset =>
         asset.id === id ? { ...asset, audio_state: "ERROR" } : asset
       ))
-      setError(result.error || "Error al generar audio")
+      setError("Error inesperado al generar audio")
     }
   }
+
   const handleGenerateVideo = async (id: string, keywords: string) => {
-    setAssets(prev => prev.map(asset => 
+    setAssets(prev => prev.map(asset =>
       asset.id === id ? { ...asset, video_state: "PROCESSING" } : asset
     ))
 
-    const result = await generateVideo(id, keywords)
-    
-    if (result.success) {
-      setTimeout(() => {
-        setAssets(prev => prev.map(asset => 
-          asset.id === id ? { ...asset, video_state: "FINISHED" } : asset
+    try {
+      const result = await generateVideo(id, keywords)
+      const { success, data } = result;
+      const realAsset = data?.data;
+
+      console.log("Generate video result:", result)
+
+      if (success && realAsset) {
+        setAssets(prev => prev.map(asset =>
+          asset.id === id ? {
+            ...asset,
+            ...realAsset
+          } : asset
         ))
-      }, 5000)
-    } else {
-      setAssets(prev => prev.map(asset => 
+      } else {
+        setAssets(prev => prev.map(asset =>
+          asset.id === id ? { ...asset, video_state: "ERROR" } : asset
+        ))
+        setError(result.error || "Error al generar video")
+      }
+    } catch (error) {
+      setAssets(prev => prev.map(asset =>
         asset.id === id ? { ...asset, video_state: "ERROR" } : asset
       ))
-      setError(result.error || "Error al generar video")
+      setError("Error inesperado al generar video")
     }
   }
 
   const handleRegenerateAll = async () => {
     setIsLoading(true)
     const result = await regenerateAllAssets(script.id)
-    
-    if (result.success) {
-      // Refresh page to get updated data
-      window.location.reload()
+    const {success, data } = result
+    const realAssets = data?.data;
+
+    if (success) {
+      setAssets(realAssets ?? []);
     } else {
       setError(result.error || "Error al regenerar assets")
     }
     setIsLoading(false)
   }
+
   const handleMixAssets = async () => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       const result = await mixScriptAssets(script.id)
-      
+
       if (result.success) {
         console.log("Assets mezclados exitosamente")
         // Refresh the page to get the updated script with mixed media URLs
@@ -117,7 +141,7 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
   }
 
   const finishedAssets = assets.filter(asset => asset.audio_state === "FINISHED").length
-  const processingAssets = assets.filter(asset => 
+  const processingAssets = assets.filter(asset =>
     asset.audio_state === "PROCESSING" || asset.video_state === "PROCESSING"
   ).length
   const totalDuration = assets.reduce((acc, asset) => acc + (asset.duration || 0), 0)
@@ -127,10 +151,10 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
       {error && (
         <div className="bg-red-900/20 border border-red-800 rounded-lg p-4">
           <p className="text-red-400">{error}</p>
-          <Button 
-            onClick={() => setError(null)} 
-            variant="outline" 
-            size="sm" 
+          <Button
+            onClick={() => setError(null)}
+            variant="outline"
+            size="sm"
             className="mt-2"
           >
             Cerrar
@@ -172,11 +196,10 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
             </Button>            <Button
               onClick={handleMixAssets}
               disabled={isLoading}
-              className={`${
-                script.mixed_audio || script.mixed_video
-                  ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
-                  : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-              }`}
+              className={`${script.mixed_audio || script.mixed_video
+                ? "bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                : "bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+                }`}
             >
               {isLoading ? (
                 <>
@@ -233,20 +256,18 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
             </CardContent>
           </Card>
 
-          <Card className={`border ${
-            script.mixed_audio || script.mixed_video 
-              ? "bg-green-900/20 border-green-600/30" 
-              : "bg-gray-900/50 border-gray-800"
-          }`}>
+          <Card className={`border ${script.mixed_audio || script.mixed_video
+            ? "bg-green-900/20 border-green-600/30"
+            : "bg-gray-900/50 border-gray-800"
+            }`}>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-gray-400">Estado Mezcla</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-xl font-bold ${
-                script.mixed_audio || script.mixed_video 
-                  ? "text-green-400" 
-                  : "text-gray-500"
-              }`}>
+              <div className={`text-xl font-bold ${script.mixed_audio || script.mixed_video
+                ? "text-green-400"
+                : "text-gray-500"
+                }`}>
                 {script.mixed_audio || script.mixed_video ? "✅ Listo" : "⏳ Pendiente"}
               </div>
             </CardContent>
@@ -255,10 +276,10 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
       </motion.div>
 
       {/* Mixed Media Results */}
-      {(script.mixed_audio || script.mixed_video) && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
+      {(script.mixed_audio) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
           <Card className="bg-gradient-to-r from-green-900/20 to-emerald-900/20 border-green-600/30">
@@ -277,8 +298,8 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
                       🎵 Audio Final
                     </h3>
                     <div className="bg-gray-800/50 rounded-lg p-4">
-                      <audio 
-                        controls 
+                      <audio
+                        controls
                         className="w-full"
                         preload="metadata"
                       >
@@ -319,57 +340,6 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
                     </div>
                   </div>
                 )}
-
-                {/* Mixed Video */}
-                {script.mixed_video && (
-                  <div className="space-y-3">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      🎬 Video Final
-                    </h3>
-                    <div className="bg-gray-800/50 rounded-lg p-4">
-                      <video 
-                        controls 
-                        className="w-full rounded-lg"
-                        preload="metadata"
-                        style={{ maxHeight: '300px' }}
-                      >
-                        <source src={script.mixed_video} type="video/mp4" />
-                        Tu navegador no soporta el elemento de video.
-                      </video>                      <div className="mt-2 flex justify-between items-center">
-                        <span className="text-sm text-gray-400">
-                          Video mezclado • MP4
-                        </span>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                            onClick={() => {
-                              const video = document.querySelector(`video[src*="${script.mixed_video}"]`) as HTMLVideoElement
-                              if (video) {
-                                if (video.paused) {
-                                  video.play()
-                                } else {
-                                  video.pause()
-                                }
-                              }
-                            }}
-                          >
-                            ⏯️
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-600 text-gray-300 hover:bg-gray-700"
-                            onClick={() => window.open(script.mixed_video, '_blank')}
-                          >
-                            📥 Descargar
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Mixed Media Info */}
@@ -390,14 +360,15 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
                 </div>
               </div>
             </CardContent>
-          </Card>        </motion.div>
+          </Card>
+        </motion.div>
       )}
 
       {/* Instructions when no mixed media */}
-      {!(script.mixed_audio || script.mixed_video) && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }} 
-          animate={{ opacity: 1, y: 0 }} 
+      {!(script.mixed_audio) && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
         >
           <Card className="bg-gradient-to-r from-blue-900/20 to-blue-900/5 border-blue-600/30">
@@ -408,7 +379,7 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
                   ¿Listo para crear tu contenido final?
                 </h3>
                 <p className="text-gray-400 max-w-lg mx-auto">
-                  Asegúrate de que todos los assets estén generados y luego haz clic en "Mezclar Assets" 
+                  Asegúrate de que todos los assets estén generados y luego haz clic en "Mezclar Assets"
                   para crear el audio y video final de tu script.
                 </p>
                 <div className="text-sm text-gray-500">
@@ -432,7 +403,8 @@ export function ScriptDetail({ project, script, initialAssets }: ScriptDetailPro
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 * index }}
-              >                <AssetCard
+              >
+                <AssetCard
                   asset={asset}
                   onUpdateLine={(line: string) => updateAssetLine(asset.id, line)}
                   onGenerateAudio={() => handleGenerateAudio(asset.id)}
